@@ -21,20 +21,14 @@ router = APIRouter()
 
 @router.get("/movies/", response_model=MovieListResponseSchema)
 async def get_movies(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=20),
-    db: AsyncSession = Depends(get_postgresql_db),
+        page: int = Query(1, ge=1),
+        per_page: int = Query(10, ge=1, le=20),
+        db: AsyncSession = Depends(get_postgresql_db),
 ):
     total_items = await db.scalar(select(func.count()).select_from(MovieModel))
     total_items = total_items or 0
     if total_items == 0:
-        return MovieListResponseSchema(
-            movies=[],
-            prev_page=None,
-            next_page=None,
-            total_pages=0,
-            total_items=0,
-        )
+        raise HTTPException(status_code=404, detail="No movies found.")
 
     total_pages = math.ceil(total_items / per_page)
     if page > total_pages and total_items > 0:
@@ -47,7 +41,7 @@ async def get_movies(
     )
     movies = result.scalars().all()
 
-    base_url = "/theater/movies/"
+    base_url = "/movies/"
     prev_page = f"{base_url}?page={page - 1}&per_page={per_page}" if page > 1 else None
     next_page = (
         f"{base_url}?page={page + 1}&per_page={per_page}"
@@ -102,7 +96,7 @@ async def get_or_create(db, model, field, value):
     "/movies/", response_model=MovieDetail, status_code=status.HTTP_201_CREATED
 )
 async def post_movies(
-    movie: MovieCreate, db: AsyncSession = Depends(get_postgresql_db)
+        movie: MovieCreate, db: AsyncSession = Depends(get_postgresql_db)
 ):
     movie_exist = await db.execute(
         select(MovieModel).where(
@@ -126,13 +120,13 @@ async def post_movies(
     )
     new_movie.country = await get_or_create(db, CountryModel, "code", movie.country)
     new_movie.genres = [
-        await get_or_create(db, GenreModel, "name", g) for g in movie.genres
+        await get_or_create(db, GenreModel, "name", gen) for gen in movie.genres
     ]
     new_movie.actors = [
-        await get_or_create(db, ActorModel, "name", a) for a in movie.actors
+        await get_or_create(db, ActorModel, "name", act) for act in movie.actors
     ]
     new_movie.languages = [
-        await get_or_create(db, LanguageModel, "name", l) for l in movie.languages
+        await get_or_create(db, LanguageModel, "name", lang) for lang in movie.languages
     ]
 
     db.add(new_movie)
@@ -159,9 +153,9 @@ async def delete_movie(movie_id: int, db: AsyncSession = Depends(get_postgresql_
 
 @router.patch("/movies/{movie_id}/", status_code=status.HTTP_200_OK)
 async def patch_movie(
-    movie_id: int,
-    movie_update: MovieUpdate,
-    db: AsyncSession = Depends(get_postgresql_db),
+        movie_id: int,
+        movie_update: MovieUpdate,
+        db: AsyncSession = Depends(get_postgresql_db),
 ):
     query = select(MovieModel).where(MovieModel.id == movie_id)
     result = await db.execute(query)

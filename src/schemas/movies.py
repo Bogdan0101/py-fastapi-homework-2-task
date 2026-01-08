@@ -93,5 +93,5 @@ class MovieUpdate(BaseModel):
         if v is None:
             return v
         if v > date.today() + timedelta(days=365):
-            raise ValueError(f"Date cannot be more than one year in the future.")
+            raise ValueError("Date cannot be more than one year in the future.")
         return v
