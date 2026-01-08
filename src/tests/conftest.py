@@ -5,7 +5,7 @@ from src.config.settings import get_settings
 from database import (
     get_db_contextmanager
 )
-from src.database.session_postgresql import reset_database
+from src.database.session_sqlite import reset_sqlite_database
 from src.database.populate import CSVDatabaseSeeder
 from main import app
 
@@ -18,7 +18,7 @@ async def reset_db():
     This fixture ensures that the database is cleared and recreated for every test function.
     It helps maintain test isolation by preventing data leakage between tests.
     """
-    await reset_database()
+    await reset_sqlite_database()
 
 
 @pytest_asyncio.fixture(scope="function")

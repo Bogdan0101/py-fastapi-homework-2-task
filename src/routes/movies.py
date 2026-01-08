@@ -19,7 +19,7 @@ from src.schemas.movies import (
 router = APIRouter()
 
 
-@router.get("/theater/movies/", response_model=MovieListResponseSchema)
+@router.get("/movies/", response_model=MovieListResponseSchema)
 async def get_movies(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=20),
@@ -28,11 +28,17 @@ async def get_movies(
     total_items = await db.scalar(select(func.count()).select_from(MovieModel))
     total_items = total_items or 0
     if total_items == 0:
-        raise HTTPException(status_code=404, detail="No movies found.")
+        return MovieListResponseSchema(
+            movies=[],
+            prev_page=None,
+            next_page=None,
+            total_pages=0,
+            total_items=0,
+        )
 
     total_pages = math.ceil(total_items / per_page)
     if page > total_pages and total_items > 0:
-        raise HTTPException(status_code=404, detail="Too many pages.")
+        raise HTTPException(status_code=404, detail="No movies found.")
     offset = (page - 1) * per_page
     if offset >= total_items:
         raise HTTPException(status_code=404, detail="No movies found.")
@@ -58,7 +64,7 @@ async def get_movies(
     )
 
 
-@router.get("/theater/movies/{movie_id}/", response_model=MovieDetail)
+@router.get("/movies/{movie_id}/", response_model=MovieDetail)
 async def get_movie_by_id(movie_id: int, db: AsyncSession = Depends(get_postgresql_db)):
     query = (
         select(MovieModel)
@@ -93,7 +99,7 @@ async def get_or_create(db, model, field, value):
 
 
 @router.post(
-    "/theater/movies/", response_model=MovieDetail, status_code=status.HTTP_201_CREATED
+    "/movies/", response_model=MovieDetail, status_code=status.HTTP_201_CREATED
 )
 async def post_movies(
     movie: MovieCreate, db: AsyncSession = Depends(get_postgresql_db)
@@ -138,7 +144,7 @@ async def post_movies(
         raise HTTPException(status_code=400, detail="Invalid input data.")
 
 
-@router.delete("/theater/movies/{movie_id}/", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/movies/{movie_id}/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_movie(movie_id: int, db: AsyncSession = Depends(get_postgresql_db)):
     query = select(MovieModel).where(MovieModel.id == movie_id)
     result = await db.execute(query)
@@ -151,7 +157,7 @@ async def delete_movie(movie_id: int, db: AsyncSession = Depends(get_postgresql_
     await db.commit()
 
 
-@router.patch("/theater/movies/{movie_id}/", status_code=status.HTTP_200_OK)
+@router.patch("/movies/{movie_id}/", status_code=status.HTTP_200_OK)
 async def patch_movie(
     movie_id: int,
     movie_update: MovieUpdate,
